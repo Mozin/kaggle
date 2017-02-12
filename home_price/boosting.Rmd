@@ -1,0 +1,114 @@
+---
+title: "boosting"
+author: "mohsin"
+date: "14 January 2017"
+output: html_document
+---
+
+# Boosting
+
+Combine simple rules(weak learners) to form a strong learner. We learn simple rules by training on a subset of data. The rules are then combined to get a complex rule. We look at subset of data to get simple rules.
+
+* Bagging --- Take random samples and do a mean
+
+* Boosting --- Learn on the hardest examples and do a weighted mean.
+
+## Weak learner
+
+A learning algorithm which has a chance of performing better than chance. 
+
+The error in learning algorithm is given by:
+
+$$\epsilon_t = Pr_D[h(x) \neq y_i ]$$
+
+
+## Pseudo code:
+
+Given training $(x_i,y_i)$ with $y_i$ values in $(-1,+1)$
+
+For t=1 to t=T
+  
+  * Construct distribution
+  * find weak classifier $h_t(x)$ with small error 
+  * output the $H_{final}$
+
+For distribution, start with the uniform distribution. At each step, the distribution changes as follows:
+
+$$D_{t+1}^{(i)} = \frac{D_{t}^{(i)} e^{-\alpha_t y_i h_t(x_i)}}{Z_t}$$
+
+where 
+
+$$\alpha_t = \frac{1}{2} ln \left(\frac{1 - \epsilon_t}{\epsilon_t}\right)$$
+and $Z_t$ is the normalization constant to make it a distribution.
+
+So it puts more weight on incorrect examples.
+
+The final hypothesis is given by combining the weak classifiers across the iterations.
+
+$$H_{final} = sgn(\sum_i \alpha_t h_t(x))$$
+The above algorithm is also known as adaboost (adaptive boosting). Viola and Jones detector in CV is based on this.
+
+
+## Gradien boosting
+
+Basic steps in this algorithm are:
+
+* Learn a regressor predictor
+* Compute the error residual
+* Learn to predict the residual
+
+Example is trying to predict the regression using a single level decision tree. 
+
+### Formal steps
+
+For i=1 to Nboost:
+
+  * Make a set of predictions $\hat{y_i}$. 
+  * Compute the error on the predictions $J(.)$
+  * Adjust $\hat{y_i}$ to account for the error:
+     $$\hat{y_i} = \hat{y_i} + \alpha f[i]$$
+     $$f[i] = \nabla J(y,\hat{y}) $$
+    
+
+### Another way to look
+
+* Initialize $F_0(x) = 0$    
+* For m=1 to M:
+  (a) Compute $$(\beta_m, \gamma_m) = arg min_{\beta, \gamma} \sum_{i=1}^{N} L(y_i, F_m-1(x_i) + \beta b(x_i; \gamma))$$
+  
+  (b) Set $F_m(x) = F_{m-1}(x) + \alpha \beta_m b(x;\gamma_m)$
+
+     
+the X remains the same. $\alpha$ is the stepsize parameter.
+
+### Code
+
+```{r}
+library(gbm)
+train_data <- read.csv("train.csv")
+GBM_model = gbm(SalePrice ~ .,data=train_data,n.trees=15000,shrinkage=0.005 ,cv.folds=3)
+test_data <- train_data[1201:1460,]
+train_data <- train_data[1:1200,]
+best.iter <- gbm.perf(GBM_model,method="cv")
+train_pred <- predict.gbm(GBM_model,train_data,best.iter)
+test_pred <- predict.gbm(GBM_model,test_data,best.iter)
+
+l2_val = sqrt(sum((test_pred - test_data$SalePrice)^2)/length(test_pred))
+test_pred
+```
+
+General notes on tuning:
+
+* Number of trees: Higher the better but have to be careful of overfitting
+* Shrinkage: learning rate. Smaller the better to avoid impact of one errenous jump in the process
+* gbm.perf tells the optimal number of iterations to get good prediction.
+
+### GBM for classification
+
+The loss function can be difference in the probability distribution given by the model vs the expected probability distribution.
+
+## XgBoost
+
+Xgboost includes training and regularization objective for optimization
+
+

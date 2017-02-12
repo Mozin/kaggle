@@ -1,0 +1,304 @@
+---
+title: "Feature engineering"
+author: "mohsin"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r, include=FALSE}
+library(dplyr)
+train_data <- read.csv("train.csv")
+test_data <- read.csv("test.csv")
+```
+
+Based on EDA, the fllowing columns are removed
+
+```{r}
+drop_cols <- c("Alley", "Street" ,"Utilities" , "Condition2", "LandSlope",
+               "RoofMatl", "Heating", "KitchenAbvGr", "OverallCond", "Exterior1st", 
+               "Exterior2nd" ,"RoofStyle", "MasVnrType", "BsmtFinType2", "BsmtFinSF2",
+               "BsmtFinType1", "BsmtFinSF1", "BsmtCond", "BsmtUnfSF", "BsmtHalfBath",
+               "HalfBath", "BedroomAbvGr", "GarageYrBlt", "GarageType", "GarageCars", 
+               "GarageQual", "GarageCond", "X3SsnPorch", "ScreenPorch", "EnclosedPorch", 
+               "PoolQC", "PoolArea", "Fence", "MiscFeature", "MiscVal", "MoSold", "YrSold") 
+```
+
+Taking care of numeric variables first:
+
+There are some NAs in the data. Hence we need to impute. Trying various imputations:
+
+1) Filling NA in Lotfrontage by average from neighbourhood
+
+```{r}
+neighbourhood_median = train_data %>% select(Neighborhood, LotFrontage) %>% filter(!is.na(LotFrontage)) %>% group_by(Neighborhood) %>% summarise(lot_frontage = median(LotFrontage))
+
+fill_na_lot_frontage <- function(lot_frontage, neighbourhood){
+  if(!is.na(lot_frontage)){
+    return(lot_frontage)
+  }
+  lot_frontage = neighbourhood_median$lot_frontage[which(neighbourhood_median$Neighborhood == neighbourhood)]
+  return(neighbourhood)
+}
+
+fill_na_lot_frontage <- Vectorize(fill_na_lot_frontage)
+
+train_dep_col <- train_data$SalePrice
+train_data$SalePrice = NULL
+nrow_train <- nrow(train_data)
+
+clean_df <- train_data %>% rbind(test_data) %>% mutate(LotFrontage = fill_na_lot_frontage(LotFrontage, Neighborhood))
+```
+
+
+Lot shape divided into two: regular and irregular
+
+```{r}
+bin_categories <- function(df, col_name, bin_list){
+  df[[col_name]] = df[[col_name]] %>% as.character()
+  lapply(seq_along(bin_list), function(i){
+    # browser()
+    df[[col_name]][df[[col_name]] %in% bin_list[[i]]] <<- names(bin_list)[[i]]
+  })
+  df
+}
+
+# input should be a factor variable
+one_hot_encode <- function(df, col_name, drop_val= NA){
+  if(df[[col_name]] %>% is.factor()){
+    fac_levels = df[[col_name]] %>% levels()
+    fac_levels <- fac_levels[-length(fac_levels)]
+    sapply(fac_levels, function(x){
+      new_col_name = paste0(col_name, "_", x)
+      df[[new_col_name]] <<- (df[[col_name]] == x) * 1
+    }) 
+    df[[col_name]] = NULL
+    if(!is.na(drop_val)){
+      drop_col_name = paste0(col_name, "_", drop_val)
+      df[[drop_col_name]] = NULL
+    }
+    return(df)
+  }
+}
+
+
+fill_NA_fac_col <- function(df, col_name, na_val){
+  df[[col_name]] = df[[col_name]] %>% as.character()
+  df[[col_name]] = ifelse(df[[col_name]] %>% is.na, "Oth", df[[col_name]])
+  df[[col_name]] = df[[col_name]] %>% as.factor()
+  return(df)
+}
+```
+
+MSSub class and MSZoning: converted to onehot encoding
+
+```{r}
+clean_df <- clean_df %>% mutate(MSSubClass = as.factor(MSSubClass))
+clean_df <- one_hot_encode(clean_df, "MSSubClass")
+clean_df <- fill_NA_fac_col(clean_df, "MSZoning", "RL")
+clean_df <- one_hot_encode(clean_df, "MSZoning")
+```
+
+Dividing LotShape such that class 1 is Regular shape and others are zero.
+
+```{r}
+clean_df <- bin_categories(clean_df, "LotShape", list("1" = c("Reg"), "0" = c("IR1", "IR2", "IR3"))) %>% mutate(LotShape = as.numeric(LotShape))
+```
+
+
+Land contour divided into levelled and non levelled and Land slope is removed
+
+```{r}
+clean_df <- bin_categories(clean_df, "LandContour", list("1" = c("Lvl"), "0" = c("Bnk", "HLS", "Low"))) %>% mutate(LandContour = as.numeric(LandContour))
+```
+
+Lot config, neighbourhood and condition1, BldgType, DwellingType is one hot encoded
+
+```{r}
+clean_df <- one_hot_encode(clean_df,"LotConfig")
+clean_df <- one_hot_encode(clean_df,"Neighborhood")
+clean_df <- one_hot_encode(clean_df,"Condition1")
+clean_df <- one_hot_encode(clean_df,"BldgType")
+clean_df <- one_hot_encode(clean_df,"HouseStyle")
+```
+
+Removing MasVnrType and keeping only MasVnrArea
+
+```{r}
+clean_df$MasVnrArea[which(is.na(clean_df$MasVnrArea))] = 0
+```
+
+Converting exterior quality and condition to numeric variable
+
+```{r}
+clean_df <- bin_categories(clean_df, "ExterQual", list("0" = c("Po"), "1" = c("Fa"), "2" = c("TA"), "3" = c("Gd"), "4" = c("Ex"))) %>% mutate(ExterQual = as.numeric(ExterQual))
+
+clean_df <- bin_categories(clean_df, "ExterCond", list("0" = c("Po"), "1" = c("Fa"), "2" = c("TA"), "3" = c("Gd"), "4" = c("Ex"))) %>% mutate(ExterCond = as.numeric(ExterCond))
+```
+
+Foundation is one hot encoded
+
+```{r}
+clean_df <- one_hot_encode(clean_df,"Foundation")
+```
+
+Basement condition does not have any entropy
+
+```{r}
+clean_df <- bin_categories(clean_df, "BsmtQual", list("0" = c("Po"), "1" = c("Fa"), "2" = c("TA"), "3" = c("Gd"), "4" = c("Ex"))) %>% mutate(BsmtQual = as.numeric(BsmtQual)) %>% mutate(BsmtQual = ifelse(is.na(BsmtQual), 0, BsmtQual))
+```
+
+Basement finished type does not look important, hence removing it
+
+```{r}
+clean_df <- bin_categories(clean_df, "BsmtExposure", list("1" = c("No"), "2" = c("Mn"), "3" = c("Av"), "4" = c("Gd"))) %>% mutate(BsmtExposure = as.numeric(BsmtExposure))%>% mutate(BsmtExposure = ifelse(is.na(BsmtExposure), 0, BsmtExposure))
+```
+
+Taking only total basement area
+
+Only type of heating is important and converting that to numerical variables
+
+```{r}
+clean_df <- bin_categories(clean_df, "HeatingQC", list("0" = c("Po"), "1" = c("Fa"), "2" = c("TA"), "3" = c("Gd"), "4" = c("Ex"))) %>% mutate(HeatingQC = as.numeric(HeatingQC))
+```
+
+central air conditioning converted to binary
+
+```{r}
+clean_df <- one_hot_encode(clean_df,"CentralAir")
+```
+
+Electrical converted to circuit breaker and non circuit breaker
+
+```{r}
+clean_df <- bin_categories(clean_df, "Electrical", list("0" = c("FuseA", "FuseF", "FuseP", "Mix", NA), "1" = c("SBrkr"))) %>% mutate(Electrical = as.numeric(Electrical))
+```
+
+Dropping BsmtHalfBath ,HalfBath, Bedroom, Kitchen as they are not highly correlated with the sale price
+
+Converting Kitchen quality to numeric
+
+```{r}
+clean_df <- bin_categories(clean_df, "KitchenQual", list("0" = c("Po"), "1" = c("Fa"), "2" = c("TA"), "3" = c("Gd"), "4" = c("Ex"))) %>% mutate(KitchenQual = as.numeric(KitchenQual)) %>% mutate(KitchenQual = ifelse(is.na(KitchenQual), 0, KitchenQual))
+```
+
+Functional converted to numeric
+
+```{r}
+clean_df <- bin_categories(clean_df, "Functional", list("0" = c(NA), "1" = c("Sal"), "2" = c("Sev"), "3" = c("Maj2"), "4" = c("Maj1"), "5" = c("Mod"), "6" = c("Min2"), "7" = c("Min1"), "8" = c("Typ"))) %>% mutate(Functional = as.numeric(Functional))
+```
+
+Fireplace quality converted to numeric
+
+```{r}
+clean_df <- bin_categories(clean_df, "FireplaceQu", list("0" = c("Po", NA), "1" = c("Fa"), "2" = c("TA"), "3" = c("Gd"), "4" = c("Ex"))) %>% mutate(FireplaceQu = as.numeric(FireplaceQu))
+```
+
+For garage, year built is removed because for houses with no garage, we cant define that
+
+Taking only garage finish and garage area of all the variables for garage. Garage quality does not look correlated like other quality type variables. Garage cars will be highly correlated to the area of the garage so removing that.
+
+GarageFinish converted to numeric
+
+```{r}
+clean_df <- bin_categories(clean_df, "GarageFinish", list("0" = c(NA), "1" = c("Unf"), "2" = c("RFn"), "3" = c("Fin"))) %>% mutate(GarageFinish = as.numeric(GarageFinish))
+```
+
+Paved drive way converted to numeric
+
+```{r}
+clean_df <- bin_categories(clean_df, "PavedDrive", list("0" = c(NA, "N"), "1" = c("P"), "2" = c("Y"))) %>% mutate(PavedDrive = as.numeric(PavedDrive))
+```
+
+3SsnPorch, EnclosedPorch and ScreenPorch are not correlated to Sale Price hence removing them.
+
+Presence of a pool does not make a difference. Hence removing that
+
+Removing fence quality now, might be important . Check later
+
+MiscFeatures look very gen. Removing that
+
+Year sold does not look important and there are no seasonal cycles for month for the house price, hence removing them
+
+One hot encoding Sale type and sale condition as of now
+
+```{r}
+clean_df <- fill_NA_fac_col(clean_df, "SaleType", "Oth")
+clean_df <- one_hot_encode(clean_df, "SaleType")
+clean_df <- one_hot_encode(clean_df, "SaleCondition")
+```
+
+Drop the unnecessary variables
+
+```{r}
+df <- clean_df
+clean_df <- clean_df[, -which(names(clean_df) %in% drop_cols)]
+```
+
+Checking for the last NAs
+
+```{r}
+na_count <-function (x) sapply(x, function(y) sum(is.na(y)))
+clean_df_NA <- na_count(clean_df)
+clean_df_NA[clean_df_NA >0]
+
+clean_df <- clean_df %>% mutate(TotalBsmtSF = ifelse(is.na(TotalBsmtSF), 0, TotalBsmtSF))
+clean_df <- clean_df %>% mutate(BsmtFullBath = ifelse(is.na(BsmtFullBath), 0, BsmtFullBath))
+clean_df <- clean_df %>% mutate(GarageArea = ifelse(is.na(GarageArea), 0, GarageArea))
+```
+
+## Modeling
+
+Seperating back to train and test
+
+```{r}
+trained_clean <- clean_df[1:nrow_train,]
+test_clean <- clean_df[(nrow_train+1):nrow(clean_df),]
+```
+
+Applying xgboost
+
+```{r, include=FALSE}
+library(xgboost)
+
+xgb_model <- xgboost(data = trained_clean %>% data.matrix(), 
+ label = train_dep_col, 
+ eta = 0.01,
+ gamma = 0,
+ max_depth = 4, 
+ nround=20000, 
+ subsample = 0.2,
+ colsample_bytree = 0.2,
+ seed = 42,
+ alpha = 0.9,
+ lambda = 0.6,
+ nthread = 3,
+ silent =1
+)
+```
+
+Predicitng and packaging for kaggle form
+
+```{r}
+test_pred_xgb = predict(xgb_model, data.matrix(test_clean))
+```
+
+# Fitting with Lasso and trying to see
+
+```{r}
+library(glmnet)
+# trained_clean$SalePrice = train_dep_col
+lasso_model <- glmnet(data.matrix(trained_clean), train_dep_col, 
+                      alpha = 0.00099, maxit=50000)
+test_lasso_pred <- predict(lasso_model, data.matrix(test_clean) ,s=1) %>% as.vector()
+```
+
+# Ensembling
+
+```{r}
+test_pred = (test_pred_xgb + test_lasso_pred)/2
+my_submission = data_frame(Id = 1461:2919, SalePrice = test_pred)
+write.csv(my_submission,"my_submission.csv", row.names = F)
+```
+
+

@@ -1,2 +1,7 @@
 kaggle.Rproj
 *.csv
+*.html
+*.RData
+*.Rhistory
+*.Rproj.*
+*.model

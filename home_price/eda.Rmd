@@ -1,0 +1,764 @@
+---
+title: "EDA"
+author: "mohsin"
+date: "27 January 2017"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r, include=FALSE}
+library(dplyr)
+library(ggplot2)
+```
+
+
+```{r}
+train_data <- read.csv("train.csv")
+test_data <- read.csv("test.csv")
+str(train_data)
+
+calc_corr <- function(var_data){
+  indices <- sapply(var_data, function(x) !is.na(x))
+  clean_data <- var_data[indices]
+  prices <- train_data$SalePrice[indices]
+  cor(clean_data, prices)
+}
+
+hist_category <- function(var_data) {
+  ggplot(data.frame(var_data), aes(x=var_data)) + geom_bar()
+}
+
+summary_category <- function(var_data){
+  cat(paste0("levels : ", levels(var_data), "\n"))
+  hist_category(var_data)
+  ggplot(train_data, aes(x=var_data, y=SalePrice)) + geom_boxplot()
+}
+
+plot_price_vs_var <- function(var_data){
+  ggplot(train_data, aes(x = var_data, y=SalePrice)) +geom_point()
+}
+
+summary_cont <- function(var_data){
+  cat("summary is ")
+  cat(summary(var_data))
+
+  boxplot(var_data)
+
+  # Correlation with the price
+  cat("Correlation with the sale price is ",calc_corr(var_data))
+}
+```
+
+## Univariate analysis
+
+1) ID -lite
+### 2) MSSubClass : The building class
+```{r}
+factor_mssubclass_levels <- as.factor(train_data$MSSubClass)
+
+levels(factor_mssubclass_levels)
+ggp <- ggplot(data.frame(factor_mssubclass_levels) , aes(x=factor_mssubclass_levels))
+ggp + geom_bar()
+
+ggplot(train_data, aes(x=factor_mssubclass_levels, y=SalePrice)) + geom_boxplot()
+```
+
+The data is not uniformly distributed
+
+3) MSZoning : The general zoning classification
+
+```{r}
+levels(train_data$MSZoning)
+ggplot(data.frame(train_data$MSZoning), aes(x=train_data$MSZoning)) + geom_bar()
+ggplot(train_data, aes(x=MSZoning, y=SalePrice)) + geom_boxplot()
+```
+
+### 3) Lot Frontage
+```{r}
+summary(train_data$LotFrontage)
+
+boxplot(train_data$LotFrontage)
+ggplot(train_data, aes(x = LotFrontage, y=SalePrice)) +geom_point()
+
+# Correlation with the price
+calc_corr(train_data$LotFrontage)
+```
+
+### 4) Lot area : Linear feet of street connected to property
+
+```{r, include=FALSE}
+summary(train_data$LotArea)
+ggplot(train_data, aes(x = LotArea, y=SalePrice)) +geom_point()
+
+boxplot(train_data$LotArea)
+
+# Correlation with the price
+calc_corr(train_data$LotArea)
+```
+
+```{r}
+plot_price_vs_var(train_data$LotArea)
+summary_cont(train_data$LotArea)
+```
+
+### 5) Street : Type of road access
+
+```{r}
+hist_category(train_data$Street)
+summary_category(train_data$Street)
+```
+
+I think that the above varibale can be removed as no entropy is there in the data
+
+### 6) Alley: Type of alley access
+```{r}
+var_data <- train_data$Alley
+hist_category(var_data)
+summary_category(var_data)
+```
+
+Again not required as we have lot of NAs
+
+### 7) LotShape: General shape of property
+```{r}
+var_data <- train_data$LotShape
+hist_category(var_data)
+summary_category(var_data)
+```
+
+### 8) LandContour: Flatness of the property
+```{r}
+var_data <- train_data$LandContour
+hist_category(var_data)
+summary_category(var_data)
+```
+
+### 9) Utilities: Type of utilities available
+```{r}
+var_data <- train_data$Utilities
+hist_category(var_data)
+summary_category(var_data)
+```
+This can also be removed as no entropy in the data
+
+### 10) LotConfig: Lot configuration
+```{r}
+var_data <- train_data$LotConfig
+hist_category(var_data)
+summary_category(var_data)
+```
+This can also be removed as no entropy in the data
+
+### 11) LandSlope: Slope of property
+```{r}
+var_data <- train_data$LandSlope
+hist_category(var_data)
+summary_category(var_data)
+```
+This can also be removed as no entropy in the data
+
+### 12) Neighborhood: Physical locations within Ames city limits
+```{r}
+var_data <- train_data$Neighborhood
+hist_category(var_data)
+summary_category(var_data)
+```
+
+### 13) Condition1: Proximity to main road or railroad
+```{r}
+var_data <- train_data$Condition1
+hist_category(var_data)
+summary_category(var_data)
+```
+This can also be removed as no entropy in the data
+
+### 14) Condition2: Proximity to main road or railroad (if a second is present)
+```{r}
+var_data <- train_data$Condition2
+hist_category(var_data)
+summary_category(var_data)
+```
+This can also be removed as no entropy in the data
+
+### 13) BldgType: Type of dwelling
+```{r}
+var_data <- train_data$BldgType
+hist_category(var_data)
+summary_category(var_data)
+```
+
+### 14) HouseStyle: Style of dwelling
+```{r}
+var_data <- train_data$HouseStyle
+hist_category(var_data)
+summary_category(var_data)
+```
+
+Can be grouped int a binary variable with 1story as a variable and the rest as others
+
+### 14) HouseStyle: Style of dwelling
+```{r}
+var_data <- train_data$HouseStyle
+hist_category(var_data)
+summary_category(var_data)
+```
+
+
+### 15) Overall quality: Overall material and finish quality
+
+```{r}
+plot_price_vs_var(train_data$OverallQual)
+summary_cont(train_data$OverallQual)
+```
+
+
+### 16) Overall condition: Overall condition rating
+
+```{r}
+plot_price_vs_var(train_data$OverallCond)
+summary_cont(train_data$OverallCond)
+```
+
+### 17) YearBuilt: Original construction date
+
+```{r}
+plot_price_vs_var(train_data$YearBuilt)
+summary_cont(train_data$YearBuilt)
+```
+
+Need to scale by putting the smallest date as 0 .
+
+### 18) YearRemodAdd: Remodel date
+
+```{r}
+plot_price_vs_var(train_data$YearRemodAdd)
+summary_cont(train_data$YearRemodAdd)
+```
+
+Need to scale by putting the smallest date as 0 .
+
+### 19) RoofStyle: Type of roof
+
+```{r}
+var_data <- train_data$RoofStyle
+hist_category(var_data)
+summary_category(var_data)
+```
+
+Can be binned nto gable and non gable
+
+### 20) RoofMatl: Roof material
+
+```{r}
+var_data <- train_data$RoofMatl
+hist_category(var_data)
+summary_category(var_data)
+```
+
+No entropy in the data, so can be ignored
+
+### 21) Exterior1st: Exterior covering on house
+
+```{r}
+var_data <- train_data$Exterior1st
+hist_category(var_data)
+summary_category(var_data)
+```
+
+### 22) Exterior2nd: Exterior covering on house (if more than one material
+
+```{r}
+var_data <- train_data$Exterior2nd
+hist_category(var_data)
+summary_category(var_data)
+```
+
+### 23) MasVnrType: Masonry veneer type
+
+```{r}
+var_data <- train_data$MasVnrType
+hist_category(var_data)
+summary_category(var_data)
+```
+
+Binary binning can be done. None and non none.
+
+### 24) MasVnrArea: Masonry veneer area in square feet
+
+```{r}
+plot_price_vs_var(train_data$MasVnrArea)
+summary_cont(train_data$MasVnrArea)
+```
+
+I think it will be advisable to use only one of the above two variables. Lets experiment.
+
+### 25) ExterQual: Exterior material quality
+
+```{r}
+var_data <- train_data$ExterQual
+hist_category(var_data)
+summary_category(var_data)
+```
+
+Can be converted to numeric variables.
+
+### 26) ExterCond: Present condition of the material on the exterior
+
+```{r}
+var_data <- train_data$ExterCond
+hist_category(var_data)
+summary_category(var_data)
+```
+
+Can be converted to numeric variables.
+
+### 27) Foundation: Type of foundation
+
+```{r}
+var_data <- train_data$Foundation
+hist_category(var_data)
+summary_category(var_data)
+```
+
+### 28) BsmtQual: Evaluates the height of the basement
+
+```{r}
+var_data <- train_data$BsmtQual
+hist_category(var_data)
+summary_category(var_data)
+```
+
+Can be converted to numeric variables.
+
+### 29) BsmtCond: Evaluates the general condition of the basement
+
+```{r}
+var_data <- train_data$BsmtCond
+hist_category(var_data)
+summary_category(var_data)
+```
+
+Can be converted to numeric variables. With Po as 0, Na as 1, Fa as 2, TA as 3 and Gd as 4
+
+Bivariate analysis: Need to do cross tab
+
+### 30) BsmtExposure: Refers to walkout or garden level walls
+
+```{r}
+var_data <- train_data$BsmtExposure
+hist_category(var_data)
+summary_category(var_data)
+```
+
+### 31) BsmtFinType1: Rating of basement finished area
+
+```{r}
+var_data <- train_data$BsmtFinType1
+hist_category(var_data)
+summary_category(var_data)
+```
+
+### 32) BsmtFinSF1: Type 1 finished square feet
+
+```{r}
+plot_price_vs_var(train_data$BsmtFinSF1)
+summary_cont(train_data$BsmtFinSF1)
+```
+
+### 33) BsmtFinType2: Rating of basement finished area (if multiple types)
+
+```{r}
+var_data <- train_data$BsmtFinType2
+hist_category(var_data)
+summary_category(var_data)
+```
+
+### 34) BsmtFinSF2: Type 2 finished square feet
+
+```{r}
+plot_price_vs_var(train_data$BsmtFinSF2)
+summary_cont(train_data$BsmtFinSF2)
+```
+
+### 35) BsmtUnfSF: Unfinished square feet of basement area
+
+```{r}
+plot_price_vs_var(train_data$BsmtUnfSF)
+summary_cont(train_data$BsmtUnfSF)
+```
+
+### 36) TotalBsmtSF: Total square feet of basement area
+
+```{r}
+plot_price_vs_var(train_data$TotalBsmtSF)
+summary_cont(train_data$TotalBsmtSF)
+```
+
+### 37) Heating: Type of heating
+
+```{r}
+var_data <- train_data$Heating
+hist_category(var_data)
+summary_category(var_data)
+```
+
+The entropy of the data is less and also I think heating quality is more important
+
+### 38) HeatingQC: Heating quality and condition
+
+```{r}
+var_data <- train_data$HeatingQC
+hist_category(var_data)
+summary_category(var_data)
+```
+
+### 39) CentralAir: Central air conditioning
+
+```{r}
+var_data <- train_data$CentralAir
+hist_category(var_data)
+summary_category(var_data)
+```
+
+### 40) Electrical: Electrical system
+
+```{r}
+var_data <- train_data$Electrical
+hist_category(var_data)
+summary_category(var_data)
+```
+
+Might have to do some data imputation and binning can be done
+
+### 41) 1stFlrSF: First Floor square feet
+ 
+```{r}
+plot_price_vs_var(train_data$X1stFlrSF)
+summary_cont(train_data$X1stFlrSF)
+```
+
+### 42) 2ndFlrSF: Second floor square feet
+ 
+```{r}
+plot_price_vs_var(train_data$X2ndFlrSF)
+summary_cont(train_data$X2ndFlrSF)
+```
+
+### 43) LowQualFinSF: Low quality finished square feet (all floors)
+ 
+```{r}
+plot_price_vs_var(train_data$LowQualFinSF)
+summary_cont(train_data$LowQualFinSF)
+```
+
+### 44) GrLivArea: Above grade (ground) living area square feet
+ 
+```{r}
+plot_price_vs_var(train_data$GrLivArea)
+summary_cont(train_data$GrLivArea)
+```
+
+### 45) BsmtFullBath: Basement full bathrooms
+
+For EDA, I am using treating this variable as a category variable
+
+```{r}
+var_data <- train_data$BsmtFullBath %>% as.factor()
+hist_category(var_data)
+summary_category(var_data)
+```
+
+Does not look like very helpful variable but still worth a try
+
+### 46) BsmtHalfBath: Basement half bathrooms
+
+For EDA, I am using treating this variable as a category variable
+
+```{r}
+var_data <- train_data$BsmtHalfBath %>% as.factor()
+hist_category(var_data)
+summary_category(var_data)
+```
+
+Does not look like very helpful variable but still worth a try
+
+### 47) FullBath: Full bathrooms above grade
+
+For EDA, I am using treating this variable as a category variable
+
+```{r}
+var_data <- train_data$FullBath %>% as.factor()
+hist_category(var_data)
+summary_category(var_data)
+calc_corr(train_data$FullBath)
+```
+
+Looks important variable
+
+### 48) HalfBath: Half baths above grade
+
+For EDA, I am using treating this variable as a category variable
+
+```{r}
+var_data <- train_data$HalfBath %>% as.factor()
+hist_category(var_data)
+summary_category(var_data)
+calc_corr(train_data$HalfBath)
+```
+
+### 49) Bedroom: Bedrooms above grade
+
+For EDA, I am using treating this variable as a category variable
+
+```{r}
+var_data <- train_data$BedroomAbvGr %>% as.factor()
+hist_category(var_data)
+summary_category(var_data)
+calc_corr(train_data$BedroomAbvGr)
+```
+
+### 50) Kitchen: Kitchens above grade
+
+For EDA, I am using treating this variable as a category variable
+
+```{r}
+var_data <- train_data$KitchenAbvGr %>% as.factor()
+hist_category(var_data)
+summary_category(var_data)
+calc_corr(train_data$KitchenAbvGr)
+```
+
+I think kitchen quality is more important than this variable
+
+### 51) KitchenQual: Kitchen quality
+
+```{r}
+var_data <- train_data$KitchenQual
+hist_category(var_data)
+summary_category(var_data)
+```
+
+Can be coverted to numeric
+
+### 52) TotRmsAbvGrd: Total rooms above grade (does not include bathrooms)
+
+For EDA, I am using treating this variable as a category variable
+
+```{r}
+var_data <- train_data$TotRmsAbvGrd %>% as.factor()
+hist_category(var_data)
+summary_category(var_data)
+calc_corr(train_data$TotRmsAbvGrd)
+```
+
+### 53) Functional: Home functionality (Assume typical unless deductions are warranted)
+
+```{r}
+var_data <- train_data$Functional
+hist_category(var_data)
+summary_category(var_data)
+```
+
+Does not look very helpful. Can be coverted to numeric as with other quality values.
+
+### 54) Fireplaces: Number of fireplaces
+
+For EDA, I am using treating this variable as a category variable
+
+```{r}
+var_data <- train_data$Fireplaces %>% as.factor()
+hist_category(var_data)
+summary_category(var_data)
+calc_corr(train_data$Fireplaces)
+```
+
+### 55) FireplaceQu: Fireplace quality
+
+```{r}
+var_data <- train_data$FireplaceQu
+hist_category(var_data)
+summary_category(var_data)
+```
+
+Can be converted to numeric and have to do a correlation check with the number of fireplaces variable
+
+### 56) GarageType: Garage location
+
+```{r}
+var_data <- train_data$GarageType
+hist_category(var_data)
+summary_category(var_data)
+```
+
+Should try to convert this to numeric variable and see with the numbers as given in the description.
+
+### 57) GarageYrBlt: Year garage was built
+ 
+```{r}
+plot_price_vs_var(train_data$GarageYrBlt)
+summary_cont(train_data$GarageYrBlt)
+```
+
+Looks as important variable. Normalize it
+
+### 58) GarageFinish: Interior finish of the garage
+
+```{r}
+var_data <- train_data$GarageFinish
+hist_category(var_data)
+summary_category(var_data)
+```
+
+Convert to numeric and check correlation with GarageYrBlt variable
+
+### 59) GarageCars: Size of garage in car capacity
+
+For EDA, I am using treating this variable as a category variable
+
+```{r}
+var_data <- train_data$GarageCars %>% as.factor()
+hist_category(var_data)
+summary_category(var_data)
+calc_corr(train_data$GarageCars)
+```
+
+### 60) GarageArea: Size of garage in square feet
+
+```{r}
+plot_price_vs_var(train_data$GarageArea)
+summary_cont(train_data$GarageArea)
+```
+
+### 61) GarageQual: Garage quality
+
+```{r}
+var_data <- train_data$GarageQual
+hist_category(var_data)
+summary_category(var_data)
+```
+
+Convert this to numeric and check correlation with other garage parameters.
+
+### 62) PavedDrive: Paved driveway
+
+```{r}
+var_data <- train_data$PavedDrive
+hist_category(var_data)
+summary_category(var_data)
+```
+
+### 63)WoodDeckSF: Wood deck area in square feet
+
+```{r}
+plot_price_vs_var(train_data$WoodDeckSF)
+summary_cont(train_data$WoodDeckSF)
+```
+
+### 64) OpenPorchSF: Open porch area in square feet
+
+```{r}
+plot_price_vs_var(train_data$OpenPorchSF)
+summary_cont(train_data$OpenPorchSF)
+```
+
+### 65) EnclosedPorch: Enclosed porch area in square feet
+
+```{r}
+plot_price_vs_var(train_data$EnclosedPorch)
+summary_cont(train_data$EnclosedPorch)
+```
+
+### 66) 3SsnPorch: Three season porch area in square feet
+
+```{r}
+plot_price_vs_var(train_data$X3SsnPorch)
+summary_cont(train_data$X3SsnPorch)
+```
+
+### 67) ScreenPorch: Screen porch area in square feet
+
+```{r}
+plot_price_vs_var(train_data$ScreenPorch)
+summary_cont(train_data$ScreenPorch)
+```
+
+### 68) PoolArea: Pool area in square feet
+
+```{r}
+plot_price_vs_var(train_data$PoolArea)
+summary_cont(train_data$PoolArea)
+```
+
+Does not seem like a deciding variable
+
+### 69) PoolQC: Pool quality
+
+```{r}
+var_data <- train_data$PoolQC
+hist_category(var_data)
+summary_category(var_data)
+```
+
+### 70) Fence: Fence quality
+
+```{r}
+var_data <- train_data$Fence
+hist_category(var_data)
+summary_category(var_data)
+```
+
+Same as other pool variable. Does not look like a deciding variable
+
+### 71) MiscFeature: Miscellaneous feature not covered in other categories
+
+```{r}
+var_data <- train_data$MiscFeature
+hist_category(var_data)
+summary_category(var_data)
+```
+
+Does not look like important variable
+
+### 72) MiscVal: $Value of miscellaneous feature
+
+```{r}
+var_data <- train_data$MiscVal
+hist_category(var_data)
+summary_category(var_data)
+```
+
+Not important variable
+
+### 73) MoSold: Month Sold (MM)
+
+```{r}
+plot_price_vs_var(train_data$MoSold)
+summary_cont(train_data$MoSold)
+```
+
+### 74) YrSold: Year Sold (YYYY)
+
+```{r}
+plot_price_vs_var(train_data$YrSold)
+summary_cont(train_data$YrSold)
+```
+
+### 75) SaleType: Type of sale
+
+```{r}
+var_data <- train_data$SaleType
+hist_category(var_data)
+summary_category(var_data)
+```
+
+### 76) SaleCondition: Condition of sale
+
+```{r}
+var_data <- train_data$SaleCondition
+hist_category(var_data)
+summary_category(var_data)
+```
+
+### Sale Price
+
