@@ -5,3 +5,4 @@ kaggle.Rproj
 *.Rhistory
 *.Rproj.*
 *.model
+.Rproj.user

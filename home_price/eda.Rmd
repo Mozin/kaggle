@@ -7,9 +7,12 @@ output:
   pdf_document: default
 ---
 
+Now, I am also gonna study the skewness in numerical variables and adjust for that.
+
 ```{r, include=FALSE}
 library(dplyr)
 library(ggplot2)
+library(moments)
 ```
 
 
@@ -48,6 +51,15 @@ summary_cont <- function(var_data){
   # Correlation with the price
   cat("Correlation with the sale price is ",calc_corr(var_data))
 }
+
+
+plot_skewness <- function(var_data){
+  var_data %>% na.omit(var_data)
+  d <- density(var_data, adjust = 2)
+  density_data <- data.frame(x = d$x, y = d$y)
+  skewness(var_data) %>% print()
+  ggplot() + geom_line(data = density_data, aes(x=x, y=y))
+}
 ```
 
 ## Univariate analysis
@@ -83,7 +95,11 @@ ggplot(train_data, aes(x = LotFrontage, y=SalePrice)) +geom_point()
 
 # Correlation with the price
 calc_corr(train_data$LotFrontage)
+
+plot_skewness(train_data$LotFrontage %>% na.omit())
 ```
+
+Needs to be adjusted by log
 
 ### 4) Lot area : Linear feet of street connected to property
 
@@ -95,7 +111,10 @@ boxplot(train_data$LotArea)
 
 # Correlation with the price
 calc_corr(train_data$LotArea)
+plot_skewness(train_data$LotArea)
 ```
+
+Apply log to the data
 
 ```{r}
 plot_price_vs_var(train_data$LotArea)
@@ -210,8 +229,12 @@ summary_category(var_data)
 ```{r}
 plot_price_vs_var(train_data$OverallQual)
 summary_cont(train_data$OverallQual)
+
+plot_skewness(train_data$OverallQual)
 ```
 
+
+Pretty much normal distributed data.
 
 ### 16) Overall condition: Overall condition rating
 
@@ -225,18 +248,26 @@ summary_cont(train_data$OverallCond)
 ```{r}
 plot_price_vs_var(train_data$YearBuilt)
 summary_cont(train_data$YearBuilt)
+
+plot_skewness(train_data$YearBuilt)
 ```
 
 Need to scale by putting the smallest date as 0 .
+
+Managable skew in the data. Not skewing now.
 
 ### 18) YearRemodAdd: Remodel date
 
 ```{r}
 plot_price_vs_var(train_data$YearRemodAdd)
 summary_cont(train_data$YearRemodAdd)
+
+plot_skewness(train_data$YearRemodAdd)
 ```
 
 Need to scale by putting the smallest date as 0 .
+
+Managable skew in the data. Not required as of now
 
 ### 19) RoofStyle: Type of roof
 
@@ -289,6 +320,8 @@ Binary binning can be done. None and non none.
 ```{r}
 plot_price_vs_var(train_data$MasVnrArea)
 summary_cont(train_data$MasVnrArea)
+
+plot_skewness(train_data$MasVnrArea %>% na.omit())
 ```
 
 I think it will be advisable to use only one of the above two variables. Lets experiment.
@@ -762,3 +795,8 @@ summary_category(var_data)
 
 ### Sale Price
 
+```{r}
+plot_skewness(train_data$SalePrice)
+```
+
+Skewed, hence need to apply log

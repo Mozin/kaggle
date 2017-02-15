@@ -1,0 +1,17 @@
+---
+title: "basic stats"
+output: html_notebook
+---
+
+# Skewness
+
+A left-skewed distribution has a long left tail. Left-skewed distributions are also called negatively-skewed distributions. That’s because there is a long tail in the negative direction on the number line. The mean is also to the left of the peak.
+
+A right-skewed distribution has a long right tail. Right-skewed distributions are also called positive-skew distributions. That’s because there is a long tail in the positive direction on the number line. The mean is also to the right of the peak.
+
+There are various formulas. Some of them are:
+
+$$skewness = \frac{3(Mean - Median)}{(Standard Deviation)}$$
+
+$$Skewness = \frac{\sum (X-\bar{x})^3}{(N-1)s^3}$$
+

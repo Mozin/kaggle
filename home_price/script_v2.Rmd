@@ -15,7 +15,7 @@ test_data <- read.csv("test.csv")
 Based on EDA, the fllowing columns are removed
 
 ```{r}
-drop_cols <- c("Alley", "Street" ,"Utilities" , "Condition2", "LandSlope",
+drop_cols <- c("Alley", "Street" ,"Utilities" , 
                "RoofMatl", "Heating", "KitchenAbvGr", "OverallCond", "Exterior1st", 
                "Exterior2nd" ,"RoofStyle", "MasVnrType", "BsmtFinType2", "BsmtFinSF2",
                "BsmtFinType1", "BsmtFinSF1", "BsmtCond", "BsmtUnfSF", "BsmtHalfBath",
@@ -23,6 +23,14 @@ drop_cols <- c("Alley", "Street" ,"Utilities" , "Condition2", "LandSlope",
                "GarageQual", "GarageCond", "X3SsnPorch", "ScreenPorch", "EnclosedPorch", 
                "PoolQC", "PoolArea", "Fence", "MiscFeature", "MiscVal", "MoSold", "YrSold") 
 ```
+
+Following colums are log adjusted
+
+```{r}
+log_cols <- c("LotFrontage", "LotArea", "MasVnrArea")
+
+```
+
 
 Taking care of numeric variables first:
 
@@ -47,7 +55,7 @@ train_dep_col <- train_data$SalePrice
 train_data$SalePrice = NULL
 nrow_train <- nrow(train_data)
 
-clean_df <- train_data %>% rbind(test_data) %>% mutate(LotFrontage = fill_na_lot_frontage(LotFrontage, Neighborhood))
+clean_df <- train_data %>% rbind(test_data) %>% mutate(LotFrontage =        fill_na_lot_frontage(LotFrontage, Neighborhood))
 ```
 
 
@@ -109,18 +117,25 @@ clean_df <- bin_categories(clean_df, "LotShape", list("1" = c("Reg"), "0" = c("I
 Land contour divided into levelled and non levelled and Land slope is removed
 
 ```{r}
-clean_df <- bin_categories(clean_df, "LandContour", list("1" = c("Lvl"), "0" = c("Bnk", "HLS", "Low"))) %>% mutate(LandContour = as.numeric(LandContour))
+clean_df <- one_hot_encode(clean_df, "LandContour")
 ```
 
 Lot config, neighbourhood and condition1, BldgType, DwellingType is one hot encoded
 
 ```{r}
 clean_df <- one_hot_encode(clean_df,"LotConfig")
+clean_df <- one_hot_encode(clean_df,"LandSlope")
 clean_df <- one_hot_encode(clean_df,"Neighborhood")
-clean_df <- one_hot_encode(clean_df,"Condition1")
+
+
+clean_df_1 <- clean_df %>% mutate(Condition2 = NULL) %>% one_hot_encode("Condition1") %>% select(contains("Condition1")) %>% mutate(Condition1_RRNn = 1-rowSums(.)) %>% select(-contains("RRne"))
+clean_df_2 <- clean_df %>% mutate(Condition1 = NULL, Condition1 = Condition2) %>% one_hot_encode("Condition1") %>% select(contains("Condition1")) %>% mutate(Condition1_RRNn = 1-rowSums(.))
+clean_df = clean_df %>% cbind( (clean_df_1 + clean_df_2) %>% select(-contains("Norm"))) %>% select(-Condition1, -Condition2)
 clean_df <- one_hot_encode(clean_df,"BldgType")
 clean_df <- one_hot_encode(clean_df,"HouseStyle")
 ```
+
+For condition variables, we are enconding as the variable is present or not. We remove normal from both the variables as it is not adding any value. We are also removing RRNe as it has very few observations
 
 Removing MasVnrType and keeping only MasVnrArea
 
